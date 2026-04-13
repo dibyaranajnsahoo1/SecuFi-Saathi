@@ -11,7 +11,7 @@ This build is intentionally focused on trust and clarity: structured tool usage,
 - Reproducible evaluation results that map directly to the rubric.
 
 ## Live URL
-- Deployed URL: `TODO_ADD_DEPLOYED_URL`
+- Deployed URL: `https://secufi-saathi.onrender.com`
 - If URL is not ready at submission time, include a short screen recording link in this section.
 
 ## Requirement mapping
