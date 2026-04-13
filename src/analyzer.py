@@ -11,16 +11,28 @@ import json
 import math
 from datetime import date
 
-from models import (
-    AnalysisMetadata,
-    EmergencyFundAnalysis,
-    GapReport,
-    HouseholdInput,
-    HouseholdMember,
-    LifeCoverAnalysis,
-    SeverityLevel,
-    SkippedMember,
-)
+try:
+    from models import (
+        AnalysisMetadata,
+        EmergencyFundAnalysis,
+        GapReport,
+        HouseholdInput,
+        HouseholdMember,
+        LifeCoverAnalysis,
+        SeverityLevel,
+        SkippedMember,
+    )
+except ImportError:
+    from src.models import (
+        AnalysisMetadata,
+        EmergencyFundAnalysis,
+        GapReport,
+        HouseholdInput,
+        HouseholdMember,
+        LifeCoverAnalysis,
+        SeverityLevel,
+        SkippedMember,
+    )
 
 
 def format_inr(amount: float) -> str:
