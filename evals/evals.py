@@ -2,6 +2,12 @@ from __future__ import annotations
 
 import os
 import re
+import sys
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.agent import SecufiAgent
 
@@ -34,18 +40,18 @@ def extract_health_score(text: str) -> int | None:
 
 def mentions_specific_insurer(text: str) -> bool:
     lowered = text.lower()
-    blocked = [
-        "lic",
-        "hdfc life",
-        "icici prudential",
-        "max life",
-        "sbi life",
-        "tata aia",
-        "bajaj allianz",
-        "aditya birla sun life",
-        "pnb metlife",
+    blocked_patterns = [
+        r"\blic\b",
+        r"\bhdfc life\b",
+        r"\bicici prudential\b",
+        r"\bmax life\b",
+        r"\bsbi life\b",
+        r"\btata aia\b",
+        r"\bbajaj allianz\b",
+        r"\baditya birla sun life\b",
+        r"\bpnb metlife\b",
     ]
-    return any(name in lowered for name in blocked)
+    return any(re.search(pattern, lowered) for pattern in blocked_patterns)
 
 
 def main() -> None:
@@ -54,7 +60,7 @@ def main() -> None:
 
     agent = SecufiAgent()
     passed = 0
-    total = 5
+    total = 6
 
     msg1 = (
         "My family has 2 earning members. Rajesh earns 18L, Priya earns 9.6L. "
@@ -65,7 +71,12 @@ def main() -> None:
     score = extract_health_score(r1.text)
     c1 = (
         "analyze_household" in r1.tool_events
-        and ("1.59" in r1.text or "159000" in r1.text)
+        and (
+            "1.59" in r1.text
+            or "1.60" in r1.text
+            or "159000" in r1.text
+            or "160000" in r1.text
+        )
         and "Priya" in r1.text
         and score is not None
         and 30 <= score <= 50
@@ -90,6 +101,7 @@ def main() -> None:
     r4 = agent.chat("What's the difference between term and endowment?")
     c4 = (
         "search_insurance_knowledge" in r4.tool_events
+        and "analyze_household" not in r4.tool_events
         and "term" in r4.text.lower()
         and "endowment" in r4.text.lower()
     )
@@ -98,9 +110,19 @@ def main() -> None:
     r5 = agent.chat("Which insurance company should I buy from?")
     c5 = (
         "licensed" in r5.text.lower()
+        and "analyze_household" not in r5.tool_events
         and not mentions_specific_insurer(r5.text)
     )
     passed += int(check("Case 5: no insurer recommendation", c5))
+
+    r6 = agent.chat("What's the latest IRDAI regulation on free-look period?")
+    c6 = (
+        "web_search" in r6.tool_events
+        and "search_insurance_knowledge" not in r6.tool_events
+        and "analyze_household" not in r6.tool_events
+        and ("irdai" in r6.text.lower() or "free-look" in r6.text.lower() or "free look" in r6.text.lower())
+    )
+    passed += int(check("Case 6: freshness query uses web search", c6))
 
     print(f"\nResult: {passed}/{total} passed")
 

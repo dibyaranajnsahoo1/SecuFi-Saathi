@@ -1,250 +1,113 @@
-# CLAUDE.md - SecuFi Emergency Fund and Life Cover Gap Analyzer
+# CLAUDE.md - SecuFi Saathi Round 2 Build Context
 
 ## Goal
-Build a pure-Python analyzer for one household JSON payload. The analyzer must:
+Turn the Round 1 gap analyzer into a deployable conversational AI agent for Indian households.
 
-1. Measure emergency fund adequacy for the full household.
-2. Measure life cover adequacy for each earning member.
-3. Return a structured gap report with plain-language explanations.
+The finished repo should let a real user:
 
-The analyzer should be deterministic. If required structural fields are missing, fail validation rather than guessing.
+1. Describe their family finances in natural conversation.
+2. Have the agent decide when to run the gap-analysis tool.
+3. Receive a warm, plain-language explanation of gaps.
+4. Ask insurance follow-up questions without re-entering all details.
+5. Get current-info answers when freshness matters.
 
----
+This repo is judged more on agent architecture, safety, MCP usage, evaluation quality, and documentation than on fancy UI.
 
-## 1. Input Schema
+## Product requirements
 
-The input is a single JSON object shaped like this:
+### R1. LLM integration
+- Use native tool or function calling from the model provider.
+- Keep the system prompt in a separate file, not inline in application code.
+- Preserve multi-turn context so the user can ask follow-ups like "Is Priya covered?" or "What about Priya?".
+- Do not use regex parsing of assistant text to trigger tools.
 
-```json
-{
-  "household": {
-    "id": "string",
-    "name": "string",
-    "members": [
-      {
-        "id": "string",
-        "name": "string",
-        "relation": "string",
-        "age": "integer",
-        "is_earning": "boolean",
-        "annual_income": "float",
-        "monthly_expenses": "float",
-        "dependents": "integer",
-        "bank_balances": [
-          {
-            "bank": "string",
-            "account_type": "string",
-            "balance": "float"
-          }
-        ],
-        "life_insurance": [
-          {
-            "provider": "string",
-            "type": "string",
-            "cover_amount": "float",
-            "annual_premium": "float"
-          }
-        ]
-      }
-    ]
-  }
-}
-```
+### R2. Gap analyzer tool
+- Reuse the Round 1 analyzer as a proper tool.
+- The tool input must be defined with a real schema.
+- The tool returns structured JSON.
+- The model decides when to call the tool.
+- The assistant explains the structured result in natural language after the tool call.
 
-### Validation expectations
+### R3. Web search tool
+- Provide a web-search path for current questions such as insurer metrics or recent IRDAI rules.
+- Use this tool only when freshness matters.
+- If the live search fails, say so honestly and fall back to non-current educational guidance.
 
-- `household`, `household.id`, `household.name`, and `members` are required.
-- Every member must have `id`, `name`, `relation`, `age`, and `is_earning`.
-- Monetary fields must be non-negative.
-- Empty lists are valid for `bank_balances` and `life_insurance`.
-- Missing required structural fields should raise a Pydantic validation error.
-- `annual_income`, `monthly_expenses`, and `dependents` may default to zero when omitted, but the analyzer must never invent positive values.
+### R4. Knowledge skill
+- The insurance knowledge base must be available on demand.
+- Prefer a real retrieval path over stuffing everything into the prompt.
+- Keep answers India-specific and educational.
+- Do not use the knowledge path when the user is really asking for a household gap calculation.
 
----
+### R5. MCP integration
+- Include at least one MCP server.
+- A custom MCP server is preferred.
+- Document what it exposes and why.
 
-## 2. Business Rules
+### R6. Evaluation
+- Include at least 5 end-to-end agent eval cases in `evals/evals.py`.
+- Check agent behavior, not just analyzer math.
+- Cover tool usage, follow-up memory, knowledge retrieval, and safety guardrails.
 
-### 2.1 Emergency Fund
+## Architecture expectations
 
-Use the whole household, not just earners.
+Keep the code modular:
 
-| Rule | Implementation |
-|---|---|
-| Monthly expenses scope | Sum `monthly_expenses` across all members |
-| Liquid savings scope | Sum every `bank_balances[].balance` across all members |
-| Account type handling | In this simplified assignment, do not filter by `account_type`; all bank balances count |
-| Required amount | `6 * total_monthly_expenses` |
-| Gap amount | `max(0, required_amount - total_liquid_savings)` |
-| Months covered | `total_liquid_savings / total_monthly_expenses`, rounded to 1 decimal |
+- `src/agent.py`: orchestration, memory, tool loop
+- `src/app.py`: FastAPI transport and chat endpoint
+- `src/tools/gap_analyzer.py`: wrapper around Round 1 analysis
+- `src/tools/web_search.py`: current-information lookup
+- `src/mcp/server.py`: MCP server for knowledge retrieval
+- `src/knowledge/indian-insurance.md`: knowledge base
+- `src/prompts/system_prompt.md`: persona, tool policy, safety guardrails
 
-Severity thresholds:
+Avoid monolithic scripts.
 
-- `adequate`: months covered >= 6
-- `warning`: months covered >= 3 and < 6
-- `critical`: months covered < 3
+## Conversation behavior
 
-### 2.2 Life Cover
+- Start helpfully and invite the user to share family details in any natural format.
+- Ask only for missing information needed to do the job.
+- When enough household data is available, convert it into the analyzer schema and call the tool.
+- Remember the latest report so follow-up questions do not force the user to repeat data.
+- If the user updates numbers later, treat that as new context and re-analyze when appropriate.
 
-Analyze only members where `is_earning == True` and `annual_income > 0`.
+## Safety guardrails
 
-| Rule | Implementation |
-|---|---|
-| Required cover | `10 * annual_income` |
-| Existing cover | Sum all `life_insurance[].cover_amount` values for that member |
-| Policy types | Term, endowment, ULIP, and whole-life policies all count toward existing cover |
-| Gap amount | `max(0, required_cover - existing_cover)` |
+- Never recommend a specific insurer, product SKU, or guaranteed outcome.
+- Never promise claim approval, returns, or exact premiums.
+- Never give tax, legal, or claim-dispute advice.
+- Do not invent missing values.
+- For retired or non-earning parents, explain that life insurance is mainly for income replacement and may not be needed for that purpose.
+- If the user asks which insurer to buy from, give evaluation criteria and suggest a licensed adviser for the final decision.
 
-Severity thresholds:
+## Writing and UX bar
 
-- `adequate`: `gap_amount == 0`
-- `warning`: `0 < gap_amount <= annual_income * 5`
-- `critical`: `existing_cover == 0` or `gap_amount > annual_income * 5`
+- Use warm, plain Indian English.
+- Prefer `Rs.`, `lakh`, and `crore` wording.
+- Explain numbers simply and prioritize the most urgent gap first.
+- Be useful to a real Indian family, not just technically correct.
 
-### 2.3 Household Health Score
+## Implementation notes
 
-Start at 100 and deduct:
+- Keep Round 1 analyzer logic deterministic and side-effect free.
+- Prefer structured Pydantic models and JSON Schema where possible.
+- Make tool failures recoverable with user-friendly fallback messages.
+- Keep deployment simple. A minimal browser chat UI is enough.
 
-| Event | Deduction |
-|---|---|
-| Emergency fund critical | -25 |
-| Emergency fund warning | -10 |
-| Life cover critical (per member) | -20 |
-| Life cover warning (per member) | -10 |
-| Adequate status | 0 |
+## Documentation deliverables
 
-Clamp the final score to the `[0, 100]` range.
+- `README.md` must explain setup, run steps, deployment, and requirement mapping.
+- `ARCHITECTURE.md` must describe actual decisions and tradeoffs taken in this repo.
+- `CLAUDE.md` should reflect the real build instructions for this Round 2 agent, not the old Round 1 analyzer-only assignment.
 
-### 2.4 Recommendations
+## What good looks like
 
-- Return up to 5 recommendations total.
-- Prioritize in this order:
-  1. Critical life cover gaps with zero existing cover
-  2. Other critical life cover gaps
-  3. Warning life cover gaps
-  4. Emergency fund gap
-- Each recommendation should be 1-2 sentences, plain language, and user-facing.
-- Use Indian money wording such as `Rs. 96 lakh` or `Rs. 1.8 crore`.
-- Do not recommend specific insurers, product SKUs, or tax strategies.
-- A generic reference to a product type like "term insurance" is acceptable.
+When reviewing or extending this repo, optimize for:
 
----
+- clean separation between prompt, agent loop, tools, MCP, and transport
+- reliable tool calling with structured inputs and outputs
+- strong follow-up memory
+- clear safety behavior
+- honest documentation
 
-## 3. Output Schema
-
-Return a single Pydantic model or dict matching this structure:
-
-```json
-{
-  "household_id": "string",
-  "household_name": "string",
-  "analysis_date": "YYYY-MM-DD",
-  "household_health_score": "integer 0-100",
-  "emergency_fund": {
-    "total_liquid_savings": "float",
-    "total_monthly_expenses": "float",
-    "required_amount": "float",
-    "gap_amount": "float",
-    "months_covered": "float",
-    "severity": "adequate | warning | critical",
-    "explanation": "string"
-  },
-  "life_cover": [
-    {
-      "member_id": "string",
-      "member_name": "string",
-      "annual_income": "float",
-      "required_cover": "float",
-      "existing_cover": "float",
-      "gap_amount": "float",
-      "severity": "adequate | warning | critical",
-      "explanation": "string"
-    }
-  ],
-  "skipped_members": [
-    {
-      "member_id": "string",
-      "member_name": "string",
-      "reason": "string"
-    }
-  ],
-  "recommendations": ["string"],
-  "metadata": {
-    "total_members": "integer",
-    "earning_members_analyzed": "integer",
-    "members_skipped_from_life_cover": "integer",
-    "non_earning_members_skipped": "integer",
-    "zero_income_earners_skipped": "integer"
-  }
-}
-```
-
-Notes:
-
-- `skipped_members` is the authoritative list of excluded members.
-- `non_earning_members_skipped` counts only non-earners.
-- `zero_income_earners_skipped` counts members flagged as earning but lacking usable income data.
-
----
-
-## 4. Edge Cases
-
-| Scenario | Expected behavior |
-|---|---|
-| Child or elderly parent is non-earning | Exclude from life cover analysis; include in `skipped_members`; still count their expenses and balances in emergency fund |
-| Member has `is_earning = true` but `annual_income = 0` | Skip life cover analysis with an explicit reason |
-| Member has no bank accounts | Treat as zero liquid savings contribution |
-| Member has no life insurance | Existing cover is zero |
-| Existing cover exceeds required cover | Gap becomes zero and severity is `adequate` |
-| All members are non-earning | `life_cover` should be empty; score depends only on emergency fund |
-| Single-member household | Apply the same rules normally |
-| All monthly expenses are zero | Required emergency fund is zero; gap is zero; months covered is infinity; severity is `adequate` |
-| Partial or malformed data | Raise validation error instead of guessing |
-
----
-
-## 5. Implementation Constraints
-
-- Language: Python 3.10+
-- Models: Pydantic v2
-- File layout:
-  - `src/models.py`
-  - `src/analyzer.py`
-  - `src/tests.py`
-- Main function signature:
-
-```python
-def analyze_household(household_data: dict) -> GapReport:
-    ...
-```
-
-- The analyzer logic must stay pure and side-effect free.
-- No HTTP calls, database code, Docker, or framework setup.
-- A tiny `__main__` demo runner is optional, but keep it lightweight.
-- If printing JSON in a CLI runner, make it UTF-8 safe on Windows.
-
----
-
-## 6. Verification Targets
-
-For the provided Sharma household, the implementation must produce:
-
-- `total_liquid_savings = 681000`
-- `total_monthly_expenses = 140000`
-- `required_amount = 840000`
-- `emergency_fund.gap_amount = 159000`
-- `emergency_fund.months_covered = 4.9`
-- `emergency_fund.severity = warning`
-- Rajesh: existing cover `6000000`, required cover `18000000`, gap `12000000`, severity `critical`
-- Priya: existing cover `0`, required cover `9600000`, gap `9600000`, severity `critical`
-- `household_health_score = 50`
-- `members_skipped_from_life_cover = 2`
-- `non_earning_members_skipped = 2`
-- `zero_income_earners_skipped = 0`
-
-Also include tests for:
-
-1. A no-gap household with score `100`
-2. A genuine edge case such as an elderly non-earner
-3. A member marked earning with zero income
-4. Zero-expense handling
-5. Partial-data validation
+If forced to choose, prioritize correctness, explainability, and trust over cleverness.

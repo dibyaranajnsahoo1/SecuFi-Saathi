@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from duckduckgo_search import DDGS
+from ddgs import DDGS
 
 
 def run_web_search(query: str, max_results: int = 5) -> dict[str, Any]:

@@ -1,17 +1,26 @@
 # SecuFi Saathi (Round 2)
 
-SecuFi Saathi is a conversational AI assistant for Indian households. It collects family financial information through chat, runs the Round 1 gap analyzer as a tool, explains protection gaps in plain language, and answers insurance education follow-ups.
+SecuFi Saathi is a conversational AI assistant for Indian households. The user shares family finances naturally in chat, the agent decides when to run gap analysis, and then explains the result in simple Indian English with practical next steps.
+
+This build is intentionally focused on trust and clarity: structured tool usage, strict safety guardrails, follow-up memory, and transparent documentation.
+
+## What I optimized for
+- A useful response for a real Indian family in the first few turns.
+- Clean agent architecture that is easy to inspect during review.
+- Safety-first behavior when users ask recommendation-style questions.
+- Reproducible evaluation results that map directly to the rubric.
 
 ## Live URL
 - Deployed URL: `TODO_ADD_DEPLOYED_URL`
+- If URL is not ready at submission time, include a short screen recording link in this section.
 
 ## Requirement mapping
 - **R1 LLM integration:** `src/agent.py` uses native OpenAI-style tool calling (`tool_choice="auto"`) with session memory.
 - **R2 Gap analyzer tool:** `src/tools/gap_analyzer.py` exposes Round 1 analysis via structured schema in tool definitions.
-- **R3 Web search tool (optional + implemented):** `src/tools/web_search.py` (DuckDuckGo search).
+- **R3 Web search tool (optional + implemented):** `src/tools/web_search.py` (DDGS web search).
 - **R4 Knowledge skill:** `src/knowledge/indian-insurance.md` queried by MCP tool `search_insurance_knowledge`.
 - **R5 MCP integration:** custom MCP server at `src/mcp/server.py` (stdio transport).
-- **R6 Evaluation:** `evals/evals.py` includes 5 behavior-level checks with pass/fail output.
+- **R6 Evaluation:** `evals/evals.py` includes 6 behavior-level checks with pass/fail output.
 
 ## Project structure
 - `src/agent.py` - main orchestration loop and conversation memory
@@ -22,9 +31,23 @@ SecuFi Saathi is a conversational AI assistant for Indian households. It collect
 - `src/knowledge/indian-insurance.md` - insurance educational knowledge base
 - `src/prompts/system_prompt.md` - agent system prompt
 - `evals/evals.py` - end-to-end evaluation script
-- `evals/results.md` - paste final eval run outputs
+- `evals/results.md` - latest eval run output snapshot
 - `ARCHITECTURE.md` - design choices and tradeoffs
 - `CLAUDE.md` - build context and constraints
+
+## How a real chat works
+1. User shares household details in free text.
+2. Agent extracts structured fields and decides if it already has enough data.
+3. If enough data exists, agent calls `analyze_household`.
+4. Agent explains emergency-fund gap, life-cover gaps, and priorities in plain language.
+5. Follow-up questions (for example "What about Priya?") reuse session context without asking everything again.
+
+## Reviewer quick-start (2 minutes)
+1. Run `python -m uvicorn src.app:app --reload`.
+2. Open `http://127.0.0.1:8000`.
+3. Paste the sample household scenario from the assignment.
+4. Ask two follow-ups: `Is Priya covered?` and `Which insurance company should I buy from?`.
+5. Confirm the agent remembers context and avoids specific insurer recommendations.
 
 ## Local setup
 ```bash
@@ -64,6 +87,17 @@ Round 2 agent evals:
 python evals/evals.py
 ```
 
+Expected eval status:
+- `Result: 6/6 passed` (see `evals/results.md`)
+
+Current eval coverage includes:
+- gap-analysis tool usage + score/gap output checks
+- follow-up memory behavior
+- retired parent safety guidance
+- knowledge retrieval route usage
+- no specific insurer recommendation
+- web freshness query route usage
+
 ## Deploy on Render (recommended)
 1. Push repo to GitHub.
 2. In Render, create **Web Service** from the repo.
@@ -91,3 +125,8 @@ python evals/evals.py
 ## Security note
 - Never commit real API keys.
 - Keep only placeholder values in `.env.example`.
+
+## Known limitations (honest notes)
+- Session memory is in-process and resets on restart.
+- Web results depend on live internet and source availability.
+- This assistant is educational and not a substitute for licensed financial, tax, or legal advice.
