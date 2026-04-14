@@ -58,7 +58,15 @@ def chat(payload: ChatRequest) -> ChatResponse:
         except Exception as error:
             raise HTTPException(status_code=500, detail=str(error)) from error
 
-    response = agent.chat(payload.message, payload.session_id)
+    try:
+        response = agent.chat(payload.message, payload.session_id)
+    except RuntimeError as error:
+        raise HTTPException(status_code=429, detail=str(error)) from error
+    except Exception as error:
+        raise HTTPException(
+            status_code=502,
+            detail="Chat request failed due to an upstream model error. Please try again.",
+        ) from error
     return ChatResponse(
         session_id=response.session_id,
         reply=response.text,

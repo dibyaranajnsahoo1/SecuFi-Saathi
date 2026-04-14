@@ -78,23 +78,45 @@ def _normalize_policies(member: ToolMemberInput) -> list[dict[str, Any]]:
 
 def _normalize_members(tool_input: GapAnalyzerToolInput) -> list[dict[str, Any]]:
     members: list[dict[str, Any]] = []
-    remaining_expenses = tool_input.total_monthly_expenses
-    remaining_savings = tool_input.total_liquid_savings
+    reported_member_expenses = sum(member.monthly_expenses for member in tool_input.members)
+    unallocated_expenses = max(0.0, tool_input.total_monthly_expenses - reported_member_expenses)
+    no_member_expenses_provided = reported_member_expenses == 0
+
+    reported_member_savings = sum(
+        float(balance.get("balance", 0) or 0)
+        for member in tool_input.members
+        for balance in member.bank_balances
+        if isinstance(balance, dict)
+    )
+    unallocated_savings = max(0.0, tool_input.total_liquid_savings - reported_member_savings)
+    no_member_savings_provided = reported_member_savings == 0
 
     for index, member in enumerate(tool_input.members, start=1):
         member_expenses = member.monthly_expenses
-        if index == 1 and remaining_expenses > member_expenses:
-            member_expenses = remaining_expenses
+        if index == 1:
+            if no_member_expenses_provided and tool_input.total_monthly_expenses > 0:
+                member_expenses = tool_input.total_monthly_expenses
+            elif unallocated_expenses > 0:
+                member_expenses += unallocated_expenses
 
         bank_balances = list(member.bank_balances)
-        if index == 1 and remaining_savings > 0:
-            bank_balances.append(
-                {
-                    "bank": "Household pooled savings",
-                    "account_type": "savings",
-                    "balance": remaining_savings,
-                }
-            )
+        if index == 1:
+            if no_member_savings_provided and tool_input.total_liquid_savings > 0:
+                bank_balances.append(
+                    {
+                        "bank": "Household pooled savings",
+                        "account_type": "savings",
+                        "balance": tool_input.total_liquid_savings,
+                    }
+                )
+            elif unallocated_savings > 0:
+                bank_balances.append(
+                    {
+                        "bank": "Household pooled savings (unallocated)",
+                        "account_type": "savings",
+                        "balance": unallocated_savings,
+                    }
+                )
 
         normalized_member = {
             "id": f"member-{index}",
@@ -109,9 +131,6 @@ def _normalize_members(tool_input: GapAnalyzerToolInput) -> list[dict[str, Any]]
             "life_insurance": _normalize_policies(member),
         }
         members.append(normalized_member)
-
-        remaining_expenses = max(0.0, remaining_expenses - member_expenses)
-        remaining_savings = 0.0
 
     return members
 

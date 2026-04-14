@@ -88,11 +88,13 @@ python evals/evals.py
 ```
 
 Expected eval status:
-- `Result: 6/6 passed` (see `evals/results.md`)
+- `Result: 8/8 passed` (see `evals/results.md`)
 
 Current eval coverage includes:
 - gap-analysis tool usage + score/gap output checks
 - follow-up memory behavior
+- shorthand follow-up memory (`What about Priya?`)
+- re-analysis when user updates financial numbers
 - retired parent safety guidance
 - knowledge retrieval route usage
 - no specific insurer recommendation

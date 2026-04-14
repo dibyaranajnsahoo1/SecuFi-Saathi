@@ -62,6 +62,14 @@
       margin-bottom: 4px;
       color: #5d6a7f;
       font-weight: 600;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .time {
+      font-weight: 500;
+      color: #7c889c;
+      font-size: 11px;
     }
     .msg {
       white-space: pre-wrap;
@@ -154,7 +162,13 @@
 
       const sender = document.createElement('div');
       sender.className = 'sender';
-      sender.textContent = role === 'user' ? 'You' : 'SecuFi Saathi';
+      const name = document.createElement('span');
+      name.textContent = role === 'user' ? 'You' : 'SecuFi Saathi';
+      const time = document.createElement('span');
+      time.className = 'time';
+      time.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      sender.appendChild(name);
+      sender.appendChild(time);
 
       const bubble = document.createElement('div');
       bubble.className = 'msg';
@@ -175,7 +189,13 @@
 
       const sender = document.createElement('div');
       sender.className = 'sender';
-      sender.textContent = 'SecuFi Saathi';
+      const name = document.createElement('span');
+      name.textContent = 'SecuFi Saathi';
+      const time = document.createElement('span');
+      time.className = 'time';
+      time.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      sender.appendChild(name);
+      sender.appendChild(time);
 
       const bubble = document.createElement('div');
       bubble.className = 'msg';

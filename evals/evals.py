@@ -60,7 +60,7 @@ def main() -> None:
 
     agent = SecufiAgent()
     passed = 0
-    total = 6
+    total = 8
 
     msg1 = (
         "My family has 2 earning members. Rajesh earns 18L, Priya earns 9.6L. "
@@ -123,6 +123,24 @@ def main() -> None:
         and ("irdai" in r6.text.lower() or "free-look" in r6.text.lower() or "free look" in r6.text.lower())
     )
     passed += int(check("Case 6: freshness query uses web search", c6))
+
+    r7 = agent.chat("What about Priya?", session_id=r1.session_id)
+    c7 = (
+        "Priya" in r7.text
+        and "analyze_household" not in r7.tool_events
+        and ("gap" in r7.text.lower() or "cover" in r7.text.lower())
+    )
+    passed += int(check("Case 7: shorthand follow-up uses memory", c7))
+
+    r8 = agent.chat(
+        "Update: Priya now has Rs. 50 lakh term cover and our savings are Rs. 8 lakh. Please recheck.",
+        session_id=r1.session_id,
+    )
+    c8 = (
+        "analyze_household" in r8.tool_events
+        and ("Priya" in r8.text or "health score" in r8.text.lower())
+    )
+    passed += int(check("Case 8: updated numbers trigger re-analysis", c8))
 
     print(f"\nResult: {passed}/{total} passed")
 

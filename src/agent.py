@@ -2,13 +2,14 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 from dotenv import load_dotenv
-from openai import OpenAI
+from openai import APIStatusError, OpenAI
 
 try:
     from tools.gap_analyzer import get_gap_analyzer_schema, run_gap_analysis
@@ -30,6 +31,22 @@ PROJECT_ROOT = BASE_DIR.parent
 load_dotenv(dotenv_path=PROJECT_ROOT / ".env")
 SYSTEM_PROMPT = (BASE_DIR / "prompts" / "system_prompt.md").read_text(encoding="utf-8")
 ANALYZE_HOUSEHOLD_SCHEMA = get_gap_analyzer_schema()
+
+
+def _looks_like_internal_reasoning(text: str) -> bool:
+    lowered = (text or "").strip().lower()
+    reasoning_markers = [
+        "i need to parse",
+        "let's extract",
+        "now we need to",
+        "i should call",
+        "we need to call",
+        "members:",
+        "household:",
+        "annual income",
+        "existing cover",
+    ]
+    return any(marker in lowered for marker in reasoning_markers)
 
 
 def _format_inr(amount: float) -> str:
@@ -163,9 +180,62 @@ class SecufiAgent:
         else:
             self.client = OpenAI(api_key=api_key)
         self.model = os.getenv("OPENAI_MODEL", model)
-        self.max_tokens = int(os.getenv("OPENAI_MAX_TOKENS", "1200"))
+        self.max_tokens = int(os.getenv("OPENAI_MAX_TOKENS", "1000"))
         self.sessions: dict[str, SessionState] = {}
         self.mcp_client = MCPKnowledgeClient()
+
+    @staticmethod
+    def _extract_affordable_max_tokens(error: Exception) -> int | None:
+        message = str(error)
+        match = re.search(r"can only afford (\d+)", message)
+        if not match:
+            return None
+        return max(64, int(match.group(1)) - 32)
+
+    def _create_completion_with_retry(
+        self,
+        messages: list[dict[str, Any]],
+        tools: list[dict[str, Any]],
+    ) -> Any:
+        attempts = [self.max_tokens, min(self.max_tokens, 700), 500, 300, 200]
+        seen: set[int] = set()
+        for token_limit in attempts:
+            if token_limit in seen:
+                continue
+            seen.add(token_limit)
+            try:
+                return self.client.chat.completions.create(
+                    model=self.model,
+                    messages=messages,
+                    tools=tools,
+                    tool_choice="auto",
+                    temperature=0.0,
+                    seed=42,
+                    max_tokens=token_limit,
+                )
+            except APIStatusError as error:
+                if error.status_code != 402:
+                    raise
+                affordable_limit = self._extract_affordable_max_tokens(error)
+                if affordable_limit and affordable_limit not in seen:
+                    try:
+                        return self.client.chat.completions.create(
+                            model=self.model,
+                            messages=messages,
+                            tools=tools,
+                            tool_choice="auto",
+                            temperature=0.0,
+                            seed=42,
+                            max_tokens=affordable_limit,
+                        )
+                    except APIStatusError:
+                        pass
+                continue
+
+        raise RuntimeError(
+            "I could not complete the response because your model credits are too low for the current token limit. "
+            "Please reduce OPENAI_MAX_TOKENS (for example 300-600) or add credits in your model provider account."
+        )
 
     def _get_session(self, session_id: str | None) -> tuple[str, SessionState]:
         sid = session_id or str(uuid.uuid4())
@@ -228,15 +298,9 @@ class SecufiAgent:
             },
         ]
 
+        rewrite_attempts = 0
         while True:
-            completion = self.client.chat.completions.create(
-                model=self.model,
-                messages=messages,
-                tools=tools,
-                tool_choice="auto",
-                temperature=0.2,
-                max_tokens=self.max_tokens,
-            )
+            completion = self._create_completion_with_retry(messages, tools)
             assistant_message = completion.choices[0].message
             messages.append(assistant_message.model_dump())
             completed_analysis: dict[str, Any] | None = None
@@ -244,6 +308,19 @@ class SecufiAgent:
             tool_calls = assistant_message.tool_calls or []
             if not tool_calls:
                 text = assistant_message.content or "I could not generate a reply."
+                if _looks_like_internal_reasoning(text) and rewrite_attempts < 2:
+                    rewrite_attempts += 1
+                    messages.append(
+                        {
+                            "role": "system",
+                            "content": (
+                                "Do not reveal your internal analysis or planning steps. "
+                                "Give only the final user-facing answer. "
+                                "If the user gave enough household details, call analyze_household first."
+                            ),
+                        }
+                    )
+                    continue
                 state.messages.append({"role": "assistant", "content": text})
                 return AgentResponse(session_id=sid, text=text, tool_events=tool_events)
 
