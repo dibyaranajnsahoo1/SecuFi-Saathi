@@ -1,11 +1,35 @@
-# REFLECTION.md
+# SecuFi Saathi - Reflection
 
-I used **Claude Sonnet 4.6** for the initial implementation because it is strong at turning a structured spec into clean Python and Pydantic code quickly. I then used **Codex** for a final QA pass focused on rubric alignment, portability, and tightening weak spots before submission.
+I built this Round 2 project mainly with Cursor as my coding workflow, using my Round 1 analyzer as the base. Instead of trying to rewrite everything manually, I worked in an iterative way: I gave Cursor one clear instruction at a time, verified the output, then asked it to improve specific areas.
 
-What the AI got right on the first pass was the overall shape of the solution. The core data model was close to what I wanted, the emergency fund logic correctly summed all household expenses and balances, and the life cover calculation followed the `10 x annual income` benchmark with the right high-level structure. The first-pass code also separated `models.py`, `analyzer.py`, and `tests.py` cleanly, which made later fixes small and local instead of structural rewrites.
+My first prompt was basically: "Round 1 logic is done, now build Round 2 around it." I asked Cursor to create the full agent structure from the problem statement, including:
+- agent orchestration
+- tool calling for the gap analyzer
+- knowledge handling for insurance basics
+- MCP integration
+- evaluation script
+- deployment-ready project layout
 
-The mistakes were all in the details, which is exactly where this assignment is won or lost. First, the life cover severity logic needed a boundary fix: a member with **zero existing cover** must be `critical` even if the generic gap threshold check might have put them elsewhere. I fixed that by making `existing_cover == 0` an explicit critical branch. Second, the analyzer needed a guard for the **zero-expense household** case to avoid dividing by zero when computing `months_covered`. Third, the recommendation logic needed improvement: I added a hard cap of five items and changed the ordering so a member with **zero cover** is prioritized ahead of someone who has some cover but still has a gap.
+The initial generated structure was good, but real issues came during runtime. I repeatedly tested through the local UI and terminal, then gave Cursor focused corrective prompts. A few examples of practical prompts I gave during development:
+- "Fix import path errors when running uvicorn from root."
+- "Do not crash on tool call if arguments are missing."
+- "Make OpenRouter work with base URL and model from env."
+- "Add max token limit to prevent OpenRouter 402 credit errors."
+- "Improve UI: show You and SecuFi Saathi labels and typing indicator."
 
-The biggest non-obvious issue was not financial logic but runtime quality. The original test runner and CLI output used Unicode in a way that broke in a normal Windows `cp1252` terminal. `python tests.py` and `python analyzer.py` failed unless UTF-8 was forced manually. I fixed that by making the test output ASCII-safe and configuring the CLI runner for UTF-8 output. I also cleaned up the metadata so non-earners skipped from life-cover analysis are counted separately from earners who were skipped because their income was zero.
+One major issue I faced was consistency and stability. Earlier, with the same kind of input, outputs could vary and sometimes caused confusion around score interpretation. To reduce this, I made sure that all financial calculations stay deterministic inside the analyzer, and that the LLM is used for orchestration and explanation, not for arithmetic decisions.
 
-If I ran this task again, I would make the context file even stricter up front. The two biggest improvements would be: 1) include exact Sharma verification targets directly in the spec, and 2) explicitly document partial-data behavior and console/output expectations. The lesson for me is that AI handles the broad structure well, but ambiguous edges, validation behavior, and platform-specific runtime details still need human review.
+Another important fix was robustness of tool execution. At one point the model triggered `analyze_household` without `household_data`, which caused a 500 error. I asked Cursor to harden the tool-call path with defensive checks and graceful fallback messages so the app asks for missing details instead of crashing.
+
+For quality verification, I used both automated and manual checks:
+- Round 1 tests to ensure no regression in core logic
+- Round 2 behavioral evals for tool use, memory, safety, and knowledge
+- repeated manual chat tests in browser for real conversation flow
+
+As of now:
+- Session memory works in-app using `session_id` and in-memory state.
+- The agent can handle follow-up queries like "What about Priya?" without re-entering all data.
+- For production-scale persistence, Redis or MongoDB would be the next upgrade.
+
+Finally, I pushed the code to GitHub and prepared deployment flow for Render/Vercel.  
+Overall, Cursor helped me move fast, but I still had to review every important change manually. My main learning: AI is excellent for speed and scaffolding, but production-quality behavior comes from iterative testing, targeted prompts, and human validation.
