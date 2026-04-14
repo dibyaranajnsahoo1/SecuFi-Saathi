@@ -3,7 +3,7 @@
 SecuFi Saathi is a conversational AI assistant for Indian households. A user shares family details in natural language, the agent decides when to call the gap analyzer tool, and then explains emergency fund and life cover gaps in plain Indian English.
 
 ## Live URL
-- Deployed URL: `ADD_YOUR_DEPLOYED_URL_HERE`
+- Deployed URL: `https://secufi-saathi.onrender.com`
 
 ## Requirement Mapping
 - **R1 - LLM integration:** `src/agent.py` uses native function/tool calling with conversation memory (`session_id` based).
