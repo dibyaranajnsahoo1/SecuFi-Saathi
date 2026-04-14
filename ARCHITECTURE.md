@@ -1,6 +1,36 @@
-# SecuFi Saathi - Architecture (simple write-up)
+# SecuFi Saathi – Implementation
 
-This is a small AI insurance assistant project for Indian families.
+I built this AI assistant using Cursor as my main development tool. I already had my Round 1 Gap Analyzer code, so I used Cursor to extend that into a full assistant by giving it the new requirements.
+
+Instead of writing everything from scratch, I guided Cursor step by step:
+- I explained that I already have a working analyzer
+- Then I asked it to build the surrounding structure like mention in problem description.
+- It generated a good initial codebase, which I then reviewed and improved
+
+During development, I faced a few real issues.
+
+The biggest issue was inconsistent scoring:
+- When I entered the same financial data twice, I sometimes got different scores Like 1st 70/100 Score , 2nd 50/100 Score .
+- This was happening because the model response was not fully deterministic and some values were not strictly controlled
+
+To fix this:
+- I explain the senario to cursor made the analyzer logic fully deterministic
+- Ensured the same input always produces the same output.
+- Reduced unnecessary dependency on LLM for calculations
+As of now
+- session memory is in app
+- For better stability, Redis or MongoDB can be used later for persistence.
+
+For quality checks:
+- I used Codex to review whether the solution meets all criteria
+- It suggested a few improvements, which i tell to uptimize it.
+- Then I re tested again in Cursor to confirm everything works properly
+
+Finally I deployed the project on Render.
+
+# SecuFi Saathi - Architecture 
+
+This is a AI insurance assistant project for Indian families.
 Main idea is simple:
 - chat with user normally
 - collect enough family money details
@@ -110,9 +140,3 @@ Evals
 
 ---
 
-What can be improved later
-
-- move session memory to Redis or DB
-- add logging/metrics for tool calls and failures
-- add retry/fallback for API failures
-- make evals more deterministic for CI
