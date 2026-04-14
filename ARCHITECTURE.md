@@ -137,6 +137,9 @@ Evals
 - safety response style
 - knowledge retrieval
 - web search for fresh questions
+- analyze_household
+- shorthand follow-up uses memory
+- updated numbers trigger re-analysis
 
 ---
 
