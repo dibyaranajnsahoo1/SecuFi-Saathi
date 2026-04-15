@@ -29,7 +29,8 @@ except Exception:  # pragma: no cover
 BASE_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = BASE_DIR.parent
 load_dotenv(dotenv_path=PROJECT_ROOT / ".env")
-SYSTEM_PROMPT = (BASE_DIR / "prompts" / "system_prompt.md").read_text(encoding="utf-8")
+SYSTEM_PROMPT = (BASE_DIR / "prompts" /
+                 "system_prompt.md").read_text(encoding="utf-8")
 ANALYZE_HOUSEHOLD_SCHEMA = get_gap_analyzer_schema()
 
 
@@ -142,7 +143,8 @@ class MCPKnowledgeClient:
         if not (ClientSession and StdioServerParameters and stdio_client):
             return {"query": query, "matched_snippets": [], "source": "mcp-not-available"}
 
-        server_params = StdioServerParameters(command="python", args=[self.server_script])
+        server_params = StdioServerParameters(
+            command="python", args=[self.server_script])
 
         async with stdio_client(server_params) as (read, write):
             async with ClientSession(read, write) as session:
@@ -248,12 +250,30 @@ class SecufiAgent:
         state.messages.append({"role": "user", "content": user_message})
         tool_events: list[str] = []
 
-        messages: list[dict[str, Any]] = [{"role": "system", "content": SYSTEM_PROMPT}]
+        messages: list[dict[str, Any]] = [
+            {"role": "system", "content": SYSTEM_PROMPT}]
         if state.last_report is not None:
+            # Format the cached report to make member names and coverage info explicit
+            report_summary = "Previous gap analysis is cached. Use this for follow-ups (do NOT re-analyze):\n"
+            life_covers = state.last_report.get("life_cover", [])
+            for cover in life_covers:
+                member = cover.get("member_name", "Unknown")
+                existing = cover.get("existing_cover", 0)
+                gap = cover.get("gap_amount", 0)
+                report_summary += f"- {member}: existing cover ₹{existing:,.0f}, gap ₹{gap:,.0f}\n"
+
+            emergency = state.last_report.get("emergency_fund", {})
+            total_savings = emergency.get("total_liquid_savings", 0)
+            recommended = emergency.get("recommended_liquid_savings", 0)
+            report_summary += f"- Emergency fund: ₹{total_savings:,.0f} available, ₹{recommended:,.0f} recommended\n"
+
+            report_summary += f"- Overall health score: {state.last_report.get('household_health_score', 'N/A')} / 100\n"
+            report_summary += "For follow-up questions about specific members or gaps, use this cached data instead of re-analyzing."
+
             messages.append(
                 {
                     "role": "system",
-                    "content": "Previous gap report context for follow-ups: " + json.dumps(state.last_report),
+                    "content": report_summary,
                 }
             )
         messages.extend(state.messages)
@@ -333,7 +353,8 @@ class SecufiAgent:
 
                 if name == "analyze_household":
                     tool_events.append("analyze_household")
-                    household_data = args.get("household_data") if "household_data" in args else args
+                    household_data = args.get(
+                        "household_data") if "household_data" in args else args
                     if household_data is None:
                         result = {
                             "error": "Missing required household fields for analysis.",

@@ -1,4 +1,5 @@
 from __future__ import annotations
+from src.agent import SecufiAgent
 
 import os
 import re
@@ -8,8 +9,6 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
-
-from src.agent import SecufiAgent
 
 
 def check(name: str, condition: bool) -> bool:
@@ -91,7 +90,8 @@ def main() -> None:
     )
     passed += int(check("Case 2: follow-up memory", c2))
 
-    r3 = agent.chat("My father is 68 and retired. Does he need life insurance?")
+    r3 = agent.chat(
+        "My father is 68 and retired. Does he need life insurance?")
     c3 = (
         "analyze_household" not in r3.tool_events
         and "income replacement" in r3.text.lower()
