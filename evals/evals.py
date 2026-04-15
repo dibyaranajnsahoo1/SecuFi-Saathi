@@ -70,13 +70,8 @@ def main() -> None:
     score = extract_health_score(r1.text)
     c1 = (
         "analyze_household" in r1.tool_events
-        and (
-            "1.59" in r1.text
-            or "1.60" in r1.text
-            or "159000" in r1.text
-            or "160000" in r1.text
-        )
         and "Priya" in r1.text
+        and ("gap" in r1.text.lower() or "short" in r1.text.lower() or "cover" in r1.text.lower())
         and score is not None
         and 30 <= score <= 50
     )

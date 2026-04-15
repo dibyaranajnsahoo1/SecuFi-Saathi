@@ -116,8 +116,17 @@ def _render_gap_report(report: dict[str, Any]) -> str:
             lines.append(f"{index}) {recommendation}")
 
     lines.append("")
+    
+    # Try to find a dependent's name, or just use the first member's name as an example
+    example_name = "Priya"
+    if life_covers:
+        if len(life_covers) > 1:
+            example_name = life_covers[1]["member_name"]
+        else:
+            example_name = life_covers[0]["member_name"]
+            
     lines.append(
-        "If you want, I can break this down member-wise (for example Priya) in the next message."
+        f"If you want, I can break this down member-wise (for example {example_name}) in the next message."
     )
     return "\n".join(lines)
 

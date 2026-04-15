@@ -3,158 +3,355 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SecuFi Saathi</title>
+  <title>SecuFi Saathi - Premium AI Assistant</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
+    :root {
+      --primary: #4F46E5;
+      --primary-hover: #4338CA;
+      --secondary: #0F172A;
+      --bg-gradient-start: #EEF2FF;
+      --bg-gradient-end: #E0E7FF;
+      --glass-bg: rgba(255, 255, 255, 0.75);
+      --glass-border: rgba(255, 255, 255, 0.5);
+      --text-dark: #1E293B;
+      --text-muted: #64748B;
+      --bubble-bot: #F8FAFC;
+      --bubble-user: #4F46E5;
+      --shadow-soft: 0 20px 40px -15px rgba(0,0,0,0.05);
+      --shadow-inner: inset 0 2px 4px 0 rgba(255,255,255,0.3);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
     body {
       margin: 0;
-      padding: 24px 12px;
-      font-family: Inter, "Segoe UI", Arial, sans-serif;
-      background: linear-gradient(180deg, #f3f6ff 0%, #f8f9fb 100%);
-      color: #1b2430;
-    }
-    .shell {
-      max-width: 900px;
-      margin: 0 auto;
-      background: #ffffff;
-      border: 1px solid #e3e7ee;
-      border-radius: 16px;
-      box-shadow: 0 10px 28px rgba(14, 26, 50, 0.08);
+      padding: 0;
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
+      color: var(--text-dark);
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       overflow: hidden;
     }
-    .header {
-      padding: 14px 16px;
-      border-bottom: 1px solid #edf1f7;
-      background: #0c1f4a;
-      color: #ffffff;
+
+    /* Ambient Background Orbs */
+    .bg-orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(80px);
+      z-index: 0;
+      animation: float 10s ease-in-out infinite alternate;
     }
-    .header h2 {
-      margin: 0;
-      font-size: 18px;
-      font-weight: 700;
+    
+    .bg-orb-1 {
+      width: 400px;
+      height: 400px;
+      background: rgba(99, 102, 241, 0.2);
+      top: -100px;
+      left: -100px;
     }
-    .header p {
-      margin: 4px 0 0 0;
-      font-size: 13px;
-      opacity: 0.9;
+
+    .bg-orb-2 {
+      width: 500px;
+      height: 500px;
+      background: rgba(236, 72, 153, 0.15);
+      bottom: -150px;
+      right: -100px;
+      animation-delay: -5s;
     }
-    #chat {
-      height: 460px;
-      overflow-y: auto;
-      padding: 16px;
-      background: #fbfcff;
+
+    @keyframes float {
+      0% { transform: translateY(0) scale(1); }
+      100% { transform: translateY(30px) scale(1.05); }
     }
-    .bubble-wrap {
-      margin: 10px 0;
+
+    /* Main Container */
+    .shell {
+      position: relative;
+      width: 100%;
+      max-width: 900px;
+      height: 90vh;
+      max-height: 800px;
+      margin: 20px;
+      background: var(--glass-bg);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid var(--glass-border);
+      border-radius: 32px;
+      box-shadow: var(--shadow-soft), var(--shadow-inner);
       display: flex;
       flex-direction: column;
-      max-width: 86%;
+      overflow: hidden;
+      z-index: 10;
     }
+
+    /* Header */
+    .header {
+      padding: 24px 32px;
+      background: rgba(255, 255, 255, 0.5);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.6);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .header-icon {
+      width: 48px;
+      height: 48px;
+      background: linear-gradient(135deg, #4F46E5, #EC4899);
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 24px;
+      box-shadow: 0 8px 16px rgba(79, 70, 229, 0.25);
+    }
+
+    .header-content h2 {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      color: var(--secondary);
+    }
+
+    .header-content p {
+      margin: 4px 0 0;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-muted);
+    }
+
+    /* Chat Area */
+    #chat {
+      flex: 1;
+      overflow-y: auto;
+      padding: 32px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      scroll-behavior: smooth;
+    }
+    
+    /* Custom Scrollbar */
+    #chat::-webkit-scrollbar {
+      width: 6px;
+    }
+    #chat::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    #chat::-webkit-scrollbar-thumb {
+      background: rgba(148, 163, 184, 0.3);
+      border-radius: 10px;
+    }
+    #chat::-webkit-scrollbar-thumb:hover {
+      background: rgba(148, 163, 184, 0.5);
+    }
+
+    /* Messages */
+    .bubble-wrap {
+      display: flex;
+      flex-direction: column;
+      max-width: 80%;
+      animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      opacity: 0;
+      transform: translateY(16px);
+    }
+
+    @keyframes slideUp {
+      to { opacity: 1; transform: translateY(0); }
+    }
+
     .bubble-wrap.user {
-      margin-left: auto;
+      align-self: flex-end;
       align-items: flex-end;
     }
+
     .bubble-wrap.bot {
-      margin-right: auto;
+      align-self: flex-start;
       align-items: flex-start;
     }
+
     .sender {
       font-size: 12px;
-      margin-bottom: 4px;
-      color: #5d6a7f;
+      margin-bottom: 8px;
+      color: var(--text-muted);
       font-weight: 600;
       display: flex;
       gap: 8px;
       align-items: center;
+      padding: 0 4px;
     }
+
     .time {
       font-weight: 500;
-      color: #7c889c;
+      color: #94A3B8;
       font-size: 11px;
     }
+
     .msg {
       white-space: pre-wrap;
-      border-radius: 12px;
-      padding: 10px 12px;
-      line-height: 1.5;
-      font-size: 14px;
-      border: 1px solid #dde4f1;
+      padding: 16px 20px;
+      line-height: 1.6;
+      font-size: 15px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
     }
+
     .bubble-wrap.user .msg {
-      background: #e7f1ff;
-      border-color: #bed5ff;
+      background: var(--bubble-user);
+      color: white;
+      border-radius: 20px 20px 4px 20px;
     }
+
     .bubble-wrap.bot .msg {
-      background: #f4f6fb;
-      border-color: #dfe4ef;
+      background: var(--bubble-bot);
+      color: var(--text-dark);
+      border: 1px solid rgba(226, 232, 240, 0.8);
+      border-radius: 20px 20px 20px 4px;
     }
+    
+    .msg strong {
+      font-weight: 600;
+      color: inherit;
+    }
+
+    /* Typing Indicator */
     .typing {
       display: inline-flex;
-      gap: 4px;
+      gap: 6px;
       align-items: center;
-      min-height: 14px;
+      height: 24px;
+      padding: 0 8px;
     }
+
     .typing span {
       width: 6px;
       height: 6px;
       border-radius: 50%;
-      background: #6c768a;
-      opacity: 0.35;
-      animation: blink 1.2s infinite ease-in-out;
+      background: var(--primary);
+      opacity: 0.4;
+      animation: bounce 1.4s infinite cubic-bezier(0.455, 0.03, 0.515, 0.955) both;
     }
-    .typing span:nth-child(2) {
-      animation-delay: 0.15s;
+
+    .typing span:nth-child(1) { animation-delay: -0.32s; }
+    .typing span:nth-child(2) { animation-delay: -0.16s; }
+
+    @keyframes bounce {
+      0%, 80%, 100% { transform: scale(0); }
+      40% { transform: scale(1); opacity: 1; }
     }
-    .typing span:nth-child(3) {
-      animation-delay: 0.3s;
-    }
-    @keyframes blink {
-      0%, 80%, 100% { opacity: 0.35; transform: translateY(0); }
-      40% { opacity: 1; transform: translateY(-1px); }
-    }
-    #row {
-      padding: 12px;
+
+    /* Input Area */
+    #input-row {
+      padding: 24px 32px;
+      background: rgba(255, 255, 255, 0.6);
+      border-top: 1px solid rgba(255, 255, 255, 0.5);
       display: flex;
-      gap: 8px;
-      border-top: 1px solid #edf1f7;
-      background: #ffffff;
+      gap: 12px;
+      border-radius: 0 0 32px 32px;
     }
+
     input {
       flex: 1;
-      padding: 11px 12px;
-      border: 1px solid #ced7e6;
-      border-radius: 10px;
-      font-size: 14px;
+      padding: 16px 24px;
+      border: 1px solid rgba(203, 213, 225, 0.6);
+      border-radius: 16px;
+      font-size: 15px;
+      font-family: inherit;
+      background: rgba(255, 255, 255, 0.9);
+      transition: all 0.3s ease;
+      outline: none;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
     }
+
+    input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
+      background: #ffffff;
+    }
+
     button {
-      padding: 11px 14px;
-      border: 0;
-      border-radius: 10px;
-      background: #0c1f4a;
+      padding: 0 28px;
+      border: none;
+      border-radius: 16px;
+      background: var(--primary);
       color: #ffffff;
       font-weight: 600;
+      font-size: 15px;
       cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
     }
+
     button:hover {
-      background: #0f2a64;
+      background: var(--primary-hover);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(79, 70, 229, 0.4);
+    }
+    
+    button:active {
+      transform: translateY(0);
+      box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);
+    }
+    
+    @media (max-width: 768px) {
+      .shell {
+        margin: 0;
+        height: 100vh;
+        border-radius: 0;
+      }
+      #input-row {
+        border-radius: 0;
+        padding: 16px;
+      }
+      .header {
+        padding: 16px;
+      }
     }
   </style>
 </head>
 <body>
+  
+  <div class="bg-orb bg-orb-1"></div>
+  <div class="bg-orb bg-orb-2"></div>
+
   <div class="shell">
     <div class="header">
-      <h2>SecuFi Saathi</h2>
-      <p>Your household protection assistant</p>
+      <div class="header-icon">✦</div>
+      <div class="header-content">
+        <h2>SecuFi Saathi</h2>
+        <p>Premium Protection Assistant for Indian Families</p>
+      </div>
     </div>
+    
     <div id="chat"></div>
-    <div id="row">
-      <input id="input" placeholder="Tell me about your family finances..." />
+    
+    <div id="input-row">
+      <input id="input" type="text" placeholder="Share your household details here..." autocomplete="off" />
       <button onclick="sendMessage()">Send</button>
     </div>
   </div>
+
   <script>
     let sessionId = null;
     const chat = document.getElementById('chat');
     const input = document.getElementById('input');
+
+    // Parse markdown briefly for simple bold rendering
+    function parseSimpleMarkdown(text) {
+      let html = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+      html = html.replace(/\n\n/g, '<br><br>');
+      html = html.replace(/\n/g, '<br>');
+      return html;
+    }
 
     function add(role, text) {
       const wrap = document.createElement('div');
@@ -162,25 +359,35 @@
 
       const sender = document.createElement('div');
       sender.className = 'sender';
+      
       const name = document.createElement('span');
       name.textContent = role === 'user' ? 'You' : 'SecuFi Saathi';
+      
       const time = document.createElement('span');
       time.className = 'time';
       time.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      
       sender.appendChild(name);
       sender.appendChild(time);
 
       const bubble = document.createElement('div');
       bubble.className = 'msg';
-      bubble.textContent = text;
+      bubble.innerHTML = parseSimpleMarkdown(text);
 
       wrap.appendChild(sender);
       wrap.appendChild(bubble);
       chat.appendChild(wrap);
-      chat.scrollTop = chat.scrollHeight;
+      
+      // Auto-scroll
+      setTimeout(() => {
+        chat.scrollTop = chat.scrollHeight;
+      }, 50);
     }
 
-    add('bot', 'Namaste! I am SecuFi Saathi. Share your household income, expenses, savings, and current insurance cover when you are ready.');
+    // Initial greeting
+    setTimeout(() => {
+      add('bot', 'Namaste! I am SecuFi Saathi. I am here to help you evaluate your family\'s financial protection.\n\nCould you share your household members, incomes, expenses, savings, and any existing insurance cover?');
+    }, 400);
 
     function addTyping() {
       const wrap = document.createElement('div');
@@ -189,16 +396,14 @@
 
       const sender = document.createElement('div');
       sender.className = 'sender';
+      
       const name = document.createElement('span');
       name.textContent = 'SecuFi Saathi';
-      const time = document.createElement('span');
-      time.className = 'time';
-      time.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       sender.appendChild(name);
-      sender.appendChild(time);
 
       const bubble = document.createElement('div');
       bubble.className = 'msg';
+      bubble.style.padding = '12px 20px';
       bubble.innerHTML = '<div class="typing"><span></span><span></span><span></span></div>';
 
       wrap.appendChild(sender);
@@ -215,27 +420,33 @@
     async function sendMessage() {
       const message = input.value.trim();
       if (!message) return;
+      
       input.value = '';
       add('user', message);
       addTyping();
+      
       try {
         const res = await fetch('/api/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ message, session_id: sessionId })
         });
+        
         const data = await res.json();
         removeTyping();
+        
         if (!res.ok) {
           const detail = data?.detail || 'Something went wrong. Please try again.';
-          add('bot', `I hit an error: ${detail}`);
+          add('bot', `I encountered an issue: ${detail}`);
           return;
         }
+        
         sessionId = data.session_id;
         add('bot', data.reply);
+        
       } catch (error) {
         removeTyping();
-        add('bot', 'I could not reach the server. Please check if backend is running.');
+        add('bot', 'I could not reach the server right now. Please test your backend connection.');
       }
     }
 
